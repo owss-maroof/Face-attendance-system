@@ -1,21 +1,3 @@
-"""
-04_attendance.py
------------------
-Real-time face recognition attendance system.
-
-Loads the fine-tuned student model, opens the webcam,
-recognises students in real time, and logs attendance
-with timestamps to a CSV file.
-
-Usage:
-    python 04_attendance.py
-    python 04_attendance.py --source 0 --threshold 0.75
-
-Controls:
-    Q → quit
-    S → save attendance manually
-"""
-
 import os
 import cv2
 import csv
@@ -27,17 +9,15 @@ from datetime import datetime
 import tensorflow as tf
 
 
-# ── Config ─────────────────────────────────────────────────────────────────
 IMG_SIZE       = 160
-THRESHOLD      = 0.75   # confidence below this → Unknown
-COOLDOWN_SECS  = 30     # seconds before same student is marked again
+THRESHOLD      = 0.75   
+COOLDOWN_SECS  = 30    
 
 FACE_CASCADE = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
 
-# ── Load Model & Labels ────────────────────────────────────────────────────
 def load_resources():
     model_path    = "models/student_model.keras"
     labels_path   = "models/student_labels.json"
@@ -62,7 +42,7 @@ def load_resources():
     return model, labels, encodings
 
 
-# ── Attendance Log ─────────────────────────────────────────────────────────
+
 def get_log_path():
     today = datetime.now().strftime("%Y-%m-%d")
     os.makedirs("attendance", exist_ok=True)
@@ -95,7 +75,6 @@ def mark_attendance(log_path, name, marked):
     return True
 
 
-# ── Face Recognition ───────────────────────────────────────────────────────
 def recognise_face(face_img, model, labels):
     img = cv2.resize(face_img, (IMG_SIZE, IMG_SIZE))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -112,14 +91,13 @@ def recognise_face(face_img, model, labels):
     return labels[class_idx], confidence
 
 
-# ── Main Loop ──────────────────────────────────────────────────────────────
 def run(args):
     model, labels, encodings = load_resources()
 
     log_path = get_log_path()
     init_log(log_path, labels)
 
-    marked = {}  # tracks last marked time per student
+    marked = {}  
 
     try:
         source = int(args.source)
@@ -146,26 +124,22 @@ def run(args):
             face_crop = frame[y:y+h, x:x+w]
             name, confidence = recognise_face(face_crop, model, labels)
 
-            # Mark attendance
             if name != "Unknown":
                 just_marked = mark_attendance(log_path, name, marked)
                 color = (0, 255, 0) if just_marked else (255, 165, 0)
             else:
                 color = (0, 0, 255)
 
-            # Draw box and label
             cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
             label_text = f"{name} ({confidence*100:.0f}%)"
             cv2.putText(frame, label_text, (x, y - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2)
 
-        # Show attendance count
         total    = len(marked)
         students = len(labels)
         cv2.putText(frame, f"Present: {total}/{students}",
                     (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
 
-        # Show date and time
         now_str = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
         cv2.putText(frame, now_str, (10, frame.shape[0] - 15),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
